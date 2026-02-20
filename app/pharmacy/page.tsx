@@ -117,18 +117,6 @@ export default function PharmacyLoginPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* DEBUG: Test button to check if JS is working */}
-              <button
-                type="button"
-                onClick={() => {
-                  console.log('TEST: Button clicked!');
-                  alert('JavaScript is working!');
-                }}
-                className="w-full py-2 bg-green-600 text-white rounded-lg text-sm"
-              >
-                TEST: Click to verify JS works
-              </button>
-
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address

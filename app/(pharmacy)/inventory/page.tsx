@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
-import { fetchPharmacy } from '@/lib/fetchWithAuth';
-
 interface InventoryItem {
   id: string;
   quantity: number;
@@ -99,7 +97,7 @@ export default function PharmacyInventoryPage() {
       params.append('page', '1');
       params.append('limit', '100');
 
-      const response = await fetchPharmacy(`/api/inventory?${params}`);
+      const response = await fetch(`/api/inventory?${params}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -115,7 +113,7 @@ export default function PharmacyInventoryPage() {
   const searchMedicines = async (query: string) => {
     setSearchingMedicines(true);
     try {
-      const response = await fetchPharmacy(`/api/medicines?search=${encodeURIComponent(query)}&limit=20`);
+      const response = await fetch(`/api/medicines?search=${encodeURIComponent(query)}&limit=20`);
       
       if (response.ok) {
         const data = await response.json();
@@ -152,7 +150,8 @@ export default function PharmacyInventoryPage() {
     setError('');
 
     try {
-      const response = await fetchPharmacy('/api/inventory', {
+      const response = await fetch('/api/inventory', {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -182,7 +181,8 @@ export default function PharmacyInventoryPage() {
     setSubmitting(true);
     setError('');
     try {
-      const response = await fetchPharmacy(`/api/inventory/${selectedItem.id}`, {
+      const response = await fetch(`/api/inventory/${selectedItem.id}`, {
+        credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: formData.quantity }),
@@ -211,7 +211,8 @@ export default function PharmacyInventoryPage() {
     }
 
     try {
-      const response = await fetchPharmacy(`/api/inventory/${id}`, {
+      const response = await fetch(`/api/inventory/${id}`, {
+        credentials: 'include',
         method: 'DELETE',
       });
 

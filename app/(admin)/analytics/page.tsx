@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Users, Building2, Package, FileText, Phone, AlertTriangle, TrendingUp } from 'lucide-react';
-import { fetchAdmin } from '@/lib/fetchWithAuth';
-
 interface AdminAnalytics {
   totalUsers: number;
   totalPatients: number;
@@ -48,7 +46,7 @@ export default function AdminAnalyticsPage() {
   const fetchAnalytics = async () => {
     try {
       console.log('📊 Fetching analytics from /api/analytics/admin');
-      const response = await fetchAdmin('/api/analytics/admin');
+      const response = await fetch('/api/analytics/admin', { credentials: 'include' });
       console.log('📡 Analytics response status:', response.status);
       
       if (!response.ok) {

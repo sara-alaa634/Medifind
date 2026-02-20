@@ -42,12 +42,12 @@ export async function GET(
         quantity: {
           gt: 0, // Only show pharmacies with stock
         },
+        pharmacy: {
+          isApproved: true, // Only show approved pharmacies
+        },
       },
       include: {
         pharmacy: {
-          where: {
-            isApproved: true, // Only show approved pharmacies
-          },
           select: {
             id: true,
             name: true,

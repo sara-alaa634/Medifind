@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Search, MapPin, Phone, Clock, Star, Check, X, Trash2, Building2 } from 'lucide-react';
-import { fetchAdmin } from '@/lib/fetchWithAuth';
-
 interface Pharmacy {
   id: string;
   name: string;
@@ -55,7 +53,7 @@ export default function AdminPharmaciesPage() {
       params.append('page', '1');
       params.append('limit', '100');
 
-      const response = await fetchAdmin(`/api/pharmacies?${params}`);
+      const response = await fetch(`/api/pharmacies?${params}`);
       if (response.ok) {
         const data = await response.json();
         setPharmacies(data.pharmacies || []);
@@ -74,7 +72,8 @@ export default function AdminPharmaciesPage() {
 
     setActioningId(id);
     try {
-      const response = await fetchAdmin(`/api/pharmacies/${id}/approve`, {
+      const response = await fetch(`/api/pharmacies/${id}/approve`, {
+        credentials: 'include',
         method: 'POST',
       });
 
@@ -99,7 +98,8 @@ export default function AdminPharmaciesPage() {
 
     setActioningId(id);
     try {
-      const response = await fetchAdmin(`/api/pharmacies/${id}`, {
+      const response = await fetch(`/api/pharmacies/${id}`, {
+        credentials: 'include',
         method: 'DELETE',
       });
 

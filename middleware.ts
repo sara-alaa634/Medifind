@@ -4,180 +4,11 @@ import { prisma } from './lib/prisma';
 
 /**
  * Next.js middleware for authentication and authorization
- * Protects routes based on user role and pharmacy approval status
+ * COMPLETELY DISABLED FOR DEBUGGING
  */
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
-  const path = request.nextUrl.pathname;
-
-  // Allow public routes
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/register',
-    '/pharmacy', // Pharmacy login page
-    '/admin', // Admin login page
-  ];
-
-  // Check if current path is a public route
-  if (publicRoutes.includes(path)) {
-    return NextResponse.next();
-  }
-
-  // Check if route requires authentication
-  const isProtectedRoute = 
-    path.startsWith('/patient') ||
-    path.startsWith('/pharmacy/') || // Pharmacy login page is public, but /pharmacy/* would be protected
-    path.startsWith('/dashboard') || // Pharmacy dashboard
-    path.startsWith('/inventory') || // Pharmacy inventory
-    path.startsWith('/reservations') || // Pharmacy reservations (patient reservations handled by /patient prefix)
-    path.startsWith('/profile') || // Pharmacy profile (patient profile handled by /patient prefix)
-    path.startsWith('/admin/') || // Admin panel and sub-routes
-    path.startsWith('/api/reservations') ||
-    path.startsWith('/api/inventory') ||
-    path.startsWith('/api/profile') ||
-    path.startsWith('/api/notifications') ||
-    path.startsWith('/api/direct-calls') ||
-    path.startsWith('/api/analytics') ||
-    (path.startsWith('/api/medicines') && request.method !== 'GET'); // POST/PUT/DELETE require auth
-
-  // Allow public routes
-  if (!isProtectedRoute) {
-    return NextResponse.next();
-  }
-
-  // Require authentication for protected routes
-  if (!token) {
-    // For API routes, return 401
-    if (path.startsWith('/api/')) {
-      return NextResponse.json(
-        { 
-          error: 'UNAUTHORIZED',
-          message: 'Authentication required',
-          statusCode: 401 
-        },
-        { status: 401 }
-      );
-    }
-    
-    // For page routes, redirect to appropriate login based on route
-    if (path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/reservations') || path.startsWith('/profile')) {
-      return NextResponse.redirect(new URL('/pharmacy', request.url));
-    }
-    if (path.startsWith('/admin/')) {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Verify JWT token
-  try {
-    const payload = await verifyJWT(token);
-    
-    // Role-based route protection
-    if (path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/api/inventory')) {
-      if (payload.role !== 'PHARMACY') {
-        return createForbiddenResponse(path, 'Pharmacy access required');
-      }
-      
-      // Check pharmacy approval status
-      const pharmacy = await prisma.pharmacy.findUnique({
-        where: { userId: payload.userId }
-      });
-      
-      if (!pharmacy?.isApproved) {
-        return createForbiddenResponse(path, 'Pharmacy not approved');
-      }
-    }
-    
-    // Pharmacy-specific routes (reservations and profile in pharmacy context)
-    if ((path.startsWith('/reservations') || path.startsWith('/profile')) && !path.startsWith('/patient')) {
-      if (payload.role !== 'PHARMACY') {
-        return createForbiddenResponse(path, 'Pharmacy access required');
-      }
-      
-      // Check pharmacy approval status
-      const pharmacy = await prisma.pharmacy.findUnique({
-        where: { userId: payload.userId }
-      });
-      
-      if (!pharmacy?.isApproved) {
-        return createForbiddenResponse(path, 'Pharmacy not approved');
-      }
-    }
-    
-    if (path.startsWith('/admin/')) {
-      if (payload.role !== 'ADMIN') {
-        return createForbiddenResponse(path, 'Admin access required');
-      }
-    }
-    
-    if (path.startsWith('/patient')) {
-      if (payload.role !== 'PATIENT') {
-        return createForbiddenResponse(path, 'Patient access required');
-      }
-    }
-    
-    // API route authorization
-    if (path.startsWith('/api/analytics/pharmacy')) {
-      if (payload.role !== 'PHARMACY') {
-        return createForbiddenResponse(path, 'Pharmacy access required');
-      }
-      
-      // Check pharmacy approval status
-      const pharmacy = await prisma.pharmacy.findUnique({
-        where: { userId: payload.userId }
-      });
-      
-      if (!pharmacy?.isApproved) {
-        return createForbiddenResponse(path, 'Pharmacy not approved');
-      }
-    }
-    
-    if (path.startsWith('/api/analytics/admin')) {
-      if (payload.role !== 'ADMIN') {
-        return createForbiddenResponse(path, 'Admin access required');
-      }
-    }
-    
-    // Medicine API routes (POST/PUT/DELETE require admin)
-    if (path.startsWith('/api/medicines') && request.method !== 'GET') {
-      if (payload.role !== 'ADMIN') {
-        return createForbiddenResponse(path, 'Admin access required');
-      }
-    }
-    
-    // Allow authenticated request to proceed
-    const response = NextResponse.next();
-    
-    // Add user info to request headers for API routes
-    response.headers.set('x-user-id', payload.userId);
-    response.headers.set('x-user-role', payload.role);
-    
-    return response;
-    
-  } catch (error) {
-    // Invalid or expired token
-    if (path.startsWith('/api/')) {
-      return NextResponse.json(
-        { 
-          error: 'UNAUTHORIZED',
-          message: 'Invalid or expired token',
-          statusCode: 401 
-        },
-        { status: 401 }
-      );
-    }
-    
-    // For page routes, redirect to appropriate login based on route
-    if (path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/reservations') || path.startsWith('/profile')) {
-      return NextResponse.redirect(new URL('/pharmacy', request.url));
-    }
-    if (path.startsWith('/admin/')) {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // Middleware is disabled - just pass through
+  return NextResponse.next();
 }
 
 /**
@@ -203,11 +34,8 @@ function createForbiddenResponse(path: string, message: string): NextResponse {
 
 /**
  * Configure which routes the middleware should run on
- * TEMPORARILY DISABLED FOR DEBUGGING
+ * COMPLETELY DISABLED
  */
 export const config = {
-  matcher: [
-    // Temporarily disable all middleware to test login
-    '/api/DISABLED_FOR_NOW/:path*',
-  ],
+  matcher: [],
 };

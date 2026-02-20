@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Camera, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import { fetchPatient } from '@/lib/fetchWithAuth';
-
 interface UserProfile {
   id: string;
   email: string;
@@ -53,7 +51,7 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
   const fetchProfile = async () => {
     try {
       setIsLoading(true);
-      const response = await fetchPatient('/api/profile');
+      const response = await fetch('/api/profile', { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
@@ -95,7 +93,8 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
         return;
       }
 
-      const response = await fetchPatient('/api/profile', {
+      const response = await fetch('/api/profile', {
+        credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -130,7 +129,8 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
     setIsSaving(true);
 
     try {
-      const response = await fetchPatient('/api/profile/avatar', {
+      const response = await fetch('/api/profile/avatar', {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatar: avatarUrl }),
@@ -174,7 +174,8 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
     setIsSaving(true);
 
     try {
-      const response = await fetchPatient('/api/profile/password', {
+      const response = await fetch('/api/profile/password', {
+        credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
