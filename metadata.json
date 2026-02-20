@@ -1,0 +1,7 @@
+{
+  "name": "MediFind",
+  "description": "A professional multi-pharmacy medicine search and reservation platform. Connects patients with nearby pharmacies to search for medicines, check real-time availability, and reserve medications for quick pickup.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
