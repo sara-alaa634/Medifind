@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
+import { fetchPharmacy } from '@/lib/fetchWithAuth';
 
 interface InventoryItem {
   id: string;
@@ -38,7 +39,6 @@ interface Medicine {
  */
 export default function PharmacyInventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,11 +47,48 @@ export default function PharmacyInventoryPage() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState({ medicineId: '', quantity: 0 });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>('');
+  
+  // Medicine search state
+  const [medicineSearch, setMedicineSearch] = useState('');
+  const [medicineResults, setMedicineResults] = useState<Medicine[]>([]);
+  const [searchingMedicines, setSearchingMedicines] = useState(false);
+  const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
+  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
 
   useEffect(() => {
     loadInventory();
-    loadMedicines();
   }, [statusFilter, searchQuery]);
+
+  // Debounced medicine search
+  useEffect(() => {
+    if (!medicineSearch || medicineSearch.length < 1) {
+      setMedicineResults([]);
+      setShowMedicineDropdown(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      searchMedicines(medicineSearch);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [medicineSearch]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.medicine-search-container')) {
+        setShowMedicineDropdown(false);
+      }
+    };
+
+    if (showMedicineDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMedicineDropdown]);
 
   const loadInventory = async () => {
     setLoading(true);
@@ -62,7 +99,8 @@ export default function PharmacyInventoryPage() {
       params.append('page', '1');
       params.append('limit', '100');
 
-      const response = await fetch(`/api/inventory?${params}`);
+      const response = await fetchPharmacy(`/api/inventory?${params}`);
+      
       if (response.ok) {
         const data = await response.json();
         setInventory(data.inventory || []);
@@ -74,24 +112,47 @@ export default function PharmacyInventoryPage() {
     }
   };
 
-  const loadMedicines = async () => {
+  const searchMedicines = async (query: string) => {
+    setSearchingMedicines(true);
     try {
-      const response = await fetch('/api/medicines?page=1&limit=1000');
+      const response = await fetchPharmacy(`/api/medicines?search=${encodeURIComponent(query)}&limit=20`);
+      
       if (response.ok) {
         const data = await response.json();
-        setMedicines(data.medicines || []);
+        setMedicineResults(data.medicines || []);
+        setShowMedicineDropdown(true);
+      } else {
+        console.error('Failed to search medicines');
+        setMedicineResults([]);
       }
     } catch (error) {
-      console.error('Error loading medicines:', error);
+      console.error('Error searching medicines:', error);
+      setMedicineResults([]);
+    } finally {
+      setSearchingMedicines(false);
     }
+  };
+
+  const selectMedicine = (medicine: Medicine) => {
+    setSelectedMedicine(medicine);
+    setFormData({ ...formData, medicineId: medicine.id });
+    setMedicineSearch(medicine.name);
+    setShowMedicineDropdown(false);
+  };
+
+  const clearMedicineSelection = () => {
+    setSelectedMedicine(null);
+    setMedicineSearch('');
+    setFormData({ ...formData, medicineId: '' });
   };
 
   const handleAddInventory = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError('');
 
     try {
-      const response = await fetch('/api/inventory', {
+      const response = await fetchPharmacy('/api/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -100,14 +161,15 @@ export default function PharmacyInventoryPage() {
       if (response.ok) {
         setShowAddModal(false);
         setFormData({ medicineId: '', quantity: 0 });
+        clearMedicineSelection();
         await loadInventory();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to add inventory item');
+        setError(data.message || 'Failed to add inventory item');
       }
     } catch (error) {
       console.error('Error adding inventory:', error);
-      alert('An error occurred');
+      setError('An error occurred while adding the medicine');
     } finally {
       setSubmitting(false);
     }
@@ -118,8 +180,9 @@ export default function PharmacyInventoryPage() {
     if (!selectedItem) return;
 
     setSubmitting(true);
+    setError('');
     try {
-      const response = await fetch(`/api/inventory/${selectedItem.id}`, {
+      const response = await fetchPharmacy(`/api/inventory/${selectedItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: formData.quantity }),
@@ -132,11 +195,11 @@ export default function PharmacyInventoryPage() {
         await loadInventory();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to update inventory');
+        setError(data.message || 'Failed to update inventory');
       }
     } catch (error) {
       console.error('Error updating inventory:', error);
-      alert('An error occurred');
+      setError('An error occurred while updating the quantity');
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +211,7 @@ export default function PharmacyInventoryPage() {
     }
 
     try {
-      const response = await fetch(`/api/inventory/${id}`, {
+      const response = await fetchPharmacy(`/api/inventory/${id}`, {
         method: 'DELETE',
       });
 
@@ -156,17 +219,17 @@ export default function PharmacyInventoryPage() {
         await loadInventory();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to delete inventory item');
+        console.error('Failed to delete:', data.message || 'Failed to delete inventory item');
       }
     } catch (error) {
       console.error('Error deleting inventory:', error);
-      alert('An error occurred');
     }
   };
 
   const openEditModal = (item: InventoryItem) => {
     setSelectedItem(item);
     setFormData({ medicineId: item.medicine.id, quantity: item.quantity });
+    setError('');
     setShowEditModal(true);
   };
 
@@ -197,6 +260,7 @@ export default function PharmacyInventoryPage() {
         <button
           onClick={() => {
             setFormData({ medicineId: '', quantity: 0 });
+            setError('');
             setShowAddModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -334,24 +398,77 @@ export default function PharmacyInventoryPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Add Medicine to Inventory</h2>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
             <form onSubmit={handleAddInventory}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Medicine
                 </label>
-                <select
-                  value={formData.medicineId}
-                  onChange={(e) => setFormData({ ...formData, medicineId: e.target.value })}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a medicine</option>
-                  {medicines.map((medicine) => (
-                    <option key={medicine.id} value={medicine.id}>
-                      {medicine.name} ({medicine.activeIngredient})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative medicine-search-container">
+                  {selectedMedicine ? (
+                    <div className="flex items-center justify-between w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{selectedMedicine.name}</p>
+                        <p className="text-xs text-gray-500">{selectedMedicine.activeIngredient}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearMedicineSelection}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                          type="text"
+                          placeholder="Search for a medicine..."
+                          value={medicineSearch}
+                          onChange={(e) => setMedicineSearch(e.target.value)}
+                          onFocus={() => medicineSearch.length >= 1 && setShowMedicineDropdown(true)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      {showMedicineDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {searchingMedicines ? (
+                            <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+                          ) : medicineResults.length === 0 ? (
+                            <div className="px-4 py-3 text-sm text-gray-500">
+                              {medicineSearch.length < 1 ? 'Type to search' : 'No medicines found'}
+                            </div>
+                          ) : (
+                            medicineResults.map((medicine) => (
+                              <button
+                                key={medicine.id}
+                                type="button"
+                                onClick={() => selectMedicine(medicine)}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                              >
+                                <p className="text-sm font-medium text-gray-900">{medicine.name}</p>
+                                <p className="text-xs text-gray-500">
+                                  {medicine.activeIngredient} • {medicine.dosage}
+                                </p>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Start typing to search from the medicine database
+                </p>
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -369,14 +486,17 @@ export default function PharmacyInventoryPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    clearMedicineSelection();
+                  }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !formData.medicineId}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                 >
                   {submitting ? 'Adding...' : 'Add Medicine'}
@@ -395,6 +515,13 @@ export default function PharmacyInventoryPage() {
             <p className="text-sm text-gray-600 mb-4">
               {selectedItem.medicine.name}
             </p>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
             <form onSubmit={handleUpdateInventory}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">

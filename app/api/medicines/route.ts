@@ -14,14 +14,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     // Parse and validate query parameters
-    const queryResult = medicineQuerySchema.safeParse({
+    const queryParams = {
       search: searchParams.get('search') || undefined,
       category: searchParams.get('category') || undefined,
       page: searchParams.get('page') || undefined,
       limit: searchParams.get('limit') || undefined,
-    });
+    };
+    
+    console.log('📋 Medicine API query params:', queryParams);
+    
+    const queryResult = medicineQuerySchema.safeParse(queryParams);
     
     if (!queryResult.success) {
+      console.error('❌ Validation failed:', queryResult.error);
       return handleError(queryResult.error);
     }
     

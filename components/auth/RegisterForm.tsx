@@ -64,13 +64,14 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json().catch(() => ({ message: 'Registration failed' }));
         setError(data.message || 'Registration failed');
         setIsLoading(false);
         return;
       }
+
+      const data = await response.json();
 
       // Redirect to login page after successful registration
       router.push('/login');

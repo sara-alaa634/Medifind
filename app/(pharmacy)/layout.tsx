@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Database, ClipboardList, User, Pill, Menu, X, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NotificationBell from '@/components/NotificationBell';
 
 export default function PharmacyLayout({
@@ -16,10 +16,10 @@ export default function PharmacyLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/pharmacy/dashboard' },
-    { id: 'inventory', label: 'Inventory', icon: Database, href: '/pharmacy/inventory' },
-    { id: 'reservations', label: 'Reservations', icon: ClipboardList, href: '/pharmacy/reservations' },
-    { id: 'profile', label: 'Profile', icon: User, href: '/pharmacy/profile' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+    { id: 'inventory', label: 'Inventory', icon: Database, href: '/inventory' },
+    { id: 'reservations', label: 'Reservations', icon: ClipboardList, href: '/reservations' },
+    { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
   ];
 
   const handleLogout = async () => {

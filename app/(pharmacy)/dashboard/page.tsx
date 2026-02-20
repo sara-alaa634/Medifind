@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Package, TrendingUp, TrendingDown, Clock, Phone, AlertTriangle } from 'lucide-react';
+import { fetchPharmacy } from '@/lib/fetchWithAuth';
 
 interface PharmacyAnalytics {
   totalReservations: number;
@@ -44,7 +45,7 @@ export default function PharmacyDashboardPage() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch('/api/analytics/pharmacy');
+      const response = await fetchPharmacy('/api/analytics/pharmacy');
       if (!response.ok) {
         throw new Error('Failed to fetch analytics');
       }

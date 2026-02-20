@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, Package, AlertCircle } from 'lucide-react';
+import { fetchAdmin } from '@/lib/fetchWithAuth';
 
 interface Medicine {
   id: string;
@@ -56,7 +57,7 @@ export default function AdminMedicinesPage() {
       params.append('page', '1');
       params.append('limit', '100');
 
-      const response = await fetch(`/api/medicines?${params}`);
+      const response = await fetchAdmin(`/api/medicines?${params}`);
       if (response.ok) {
         const data = await response.json();
         setMedicines(data.medicines || []);
@@ -79,7 +80,7 @@ export default function AdminMedicinesPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/medicines', {
+      const response = await fetchAdmin('/api/medicines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -107,7 +108,7 @@ export default function AdminMedicinesPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/medicines/${selectedMedicine.id}`, {
+      const response = await fetchAdmin(`/api/medicines/${selectedMedicine.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -136,7 +137,7 @@ export default function AdminMedicinesPage() {
     }
 
     try {
-      const response = await fetch(`/api/medicines/${id}`, {
+      const response = await fetchAdmin(`/api/medicines/${id}`, {
         method: 'DELETE',
       });
 

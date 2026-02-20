@@ -12,68 +12,49 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  console.log('AdminLoginPage rendered');
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Form submitted!');
     setError('');
     setLoading(true);
 
+    console.log('🔐 Attempting login with:', { email, password: '***' });
+
     try {
-      alert('Starting login...');
-      console.log('Attempting login with:', { email });
-      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
 
-      alert(`Response status: ${response.status}`);
-      console.log('Response status:', response.status);
+      console.log('📡 Response status:', response.status);
 
-      // If status is 200, login succeeded
-      if (response.status === 200) {
-        alert('Login successful! Redirecting...');
-        console.log('Login successful (status 200), redirecting...');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Login response:', { ...data, token: '***' });
         
-        // Try to parse response, but don't fail if it doesn't work
-        try {
-          const data = await response.json();
-          console.log('Response data:', data);
-          
-          // Check if user is admin
-          if (data.user && data.user.role !== 'ADMIN') {
-            alert('Not an admin account!');
-            setError('This login is for admin accounts only');
-            setLoading(false);
-            return;
-          }
-        } catch (parseError) {
-          console.log('Could not parse response, but status is 200, proceeding...');
+        // Check if user is admin
+        if (data.user && data.user.role !== 'ADMIN') {
+          console.log('❌ User is not admin:', data.user.role);
+          setError('This login is for admin accounts only');
+          setLoading(false);
+          return;
         }
         
-        // Redirect to admin analytics
-        alert('About to redirect to /admin/analytics');
-        window.location.href = '/admin/analytics';
-        return;
+        console.log('✅ Admin login successful, redirecting...');
+        // Wait for cookie to be properly set before redirecting
+        await new Promise(resolve => setTimeout(resolve, 500));
+        window.location.href = '/analytics';
+      } else {
+        const data = await response.json().catch(() => ({ message: 'Login failed' }));
+        console.log('❌ Login failed:', data);
+        setError(data.message || 'Invalid email or password');
+        setLoading(false);
       }
-
-      // Handle non-200 responses
-      alert(`Login failed with status: ${response.status}`);
-      try {
-        const data = await response.json();
-        setError(data.message || 'Login failed');
-      } catch {
-        setError('Login failed');
-      }
-      setLoading(false);
       
     } catch (err) {
-      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('Login error:', err);
-      setError(`An error occurred: ${err instanceof Error ? err.message : 'Please try again.'}`);
+      console.error('❌ Network error:', err);
+      setError('Network error. Please try again.');
       setLoading(false);
     }
   };
@@ -101,7 +82,7 @@ export default function AdminLoginPage() {
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
                 <Shield size={32} className="text-purple-600" />
@@ -127,7 +108,7 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder="admin@medifind.com"
                 />
               </div>
@@ -142,7 +123,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder="Enter your password"
                 />
               </div>
@@ -150,17 +131,17 @@ export default function AdminLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg shadow-purple-200"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
 
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-800">
-                <span className="font-semibold">Default Admin:</span><br />
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800">
+                <span className="font-semibold">Test Admin Account:</span><br />
                 Email: admin@medifind.com<br />
-                Password: admin123456
+                Password: password123
               </p>
             </div>
           </div>

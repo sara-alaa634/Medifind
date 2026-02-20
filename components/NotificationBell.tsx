@@ -23,10 +23,12 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications
+  // Fetch notifications - don't redirect on 401, just fail silently
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications');
+      const response = await fetch('/api/notifications', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
@@ -66,6 +68,7 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
     try {
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: 'PUT',
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -85,6 +88,7 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
     try {
       const response = await fetch('/api/notifications/mark-all-read', {
         method: 'PUT',
+        credentials: 'include',
       });
 
       if (response.ok) {

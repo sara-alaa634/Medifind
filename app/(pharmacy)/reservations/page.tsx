@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Clock, MapPin, Phone, Package, User, AlertCircle, Check, X } from 'lucide-react';
+import { fetchPharmacy } from '@/lib/fetchWithAuth';
 
 interface Reservation {
   id: string;
@@ -61,7 +62,7 @@ export default function PharmacyReservationsPage() {
       params.append('page', '1');
       params.append('limit', '100');
 
-      const response = await fetch(`/api/reservations?${params}`);
+      const response = await fetchPharmacy(`/api/reservations?${params}`);
       if (response.ok) {
         const data = await response.json();
         setReservations(data.reservations || []);
@@ -93,7 +94,7 @@ export default function PharmacyReservationsPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/reservations/${selectedReservation.id}/accept`, {
+      const response = await fetchPharmacy(`/api/reservations/${selectedReservation.id}/accept`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: actionNote || undefined }),
@@ -122,7 +123,7 @@ export default function PharmacyReservationsPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/reservations/${selectedReservation.id}/reject`, {
+      const response = await fetchPharmacy(`/api/reservations/${selectedReservation.id}/reject`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: actionNote || undefined }),

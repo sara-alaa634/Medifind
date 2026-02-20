@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Pill, Users, Menu, X, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NotificationBell from '@/components/NotificationBell';
 
 export default function AdminLayout({
@@ -14,11 +14,54 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user && data.user.role === 'ADMIN') {
+          setIsAuthenticated(true);
+        } else {
+          router.push('/admin');
+        }
+      } else {
+        router.push('/admin');
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      router.push('/admin');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const navItems = [
-    { id: 'analytics', label: 'Analytics', icon: LayoutDashboard, href: '/admin/analytics' },
-    { id: 'pharmacies', label: 'Pharmacies', icon: Users, href: '/admin/pharmacies' },
-    { id: 'medicines', label: 'Medicines', icon: Pill, href: '/admin/medicines' },
+    { id: 'analytics', label: 'Analytics', icon: LayoutDashboard, href: '/analytics' },
+    { id: 'pharmacies', label: 'Pharmacies', icon: Users, href: '/pharmacies' },
+    { id: 'medicines', label: 'Medicines', icon: Pill, href: '/medicines' },
   ];
 
   const handleLogout = async () => {

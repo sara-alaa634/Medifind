@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Clock, MapPin, Phone, Package, AlertCircle, X } from 'lucide-react';
+import { fetchPatient } from '@/lib/fetchWithAuth';
 
 interface Reservation {
   id: string;
@@ -58,7 +59,7 @@ export default function PatientReservationsPage() {
       params.append('page', '1');
       params.append('limit', '50');
 
-      const response = await fetch(`/api/reservations?${params}`);
+      const response = await fetchPatient(`/api/reservations?${params}`);
       if (response.ok) {
         const data = await response.json();
         setReservations(data.reservations || []);
@@ -79,7 +80,7 @@ export default function PatientReservationsPage() {
 
     setCancellingId(reservationId);
     try {
-      const response = await fetch(`/api/reservations/${reservationId}/cancel`, {
+      const response = await fetchPatient(`/api/reservations/${reservationId}/cancel`, {
         method: 'PUT',
       });
 

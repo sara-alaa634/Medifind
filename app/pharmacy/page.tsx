@@ -18,43 +18,52 @@ export default function PharmacyLoginPage() {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', { email });
+      console.log('=== LOGIN ATTEMPT START ===');
+      console.log('Email:', email);
+      console.log('Password length:', password.length);
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       // If status is 200, login succeeded
       if (response.status === 200) {
-        console.log('Login successful (status 200), redirecting...');
+        console.log('✓ Login successful (status 200)');
         
-        // Try to parse response, but don't fail if it doesn't work
-        try {
-          const data = await response.json();
-          console.log('Response data:', data);
-          
-          // Check if user is pharmacy
-          if (data.user && data.user.role !== 'PHARMACY') {
-            setError('This login is for pharmacy accounts only');
-            setLoading(false);
-            return;
-          }
-        } catch (parseError) {
-          console.log('Could not parse response, but status is 200, proceeding...');
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        // Check if user is pharmacy
+        if (data.user && data.user.role !== 'PHARMACY') {
+          console.log('✗ Wrong role:', data.user.role);
+          setError('This login is for pharmacy accounts only');
+          setLoading(false);
+          return;
         }
         
-        // Redirect to pharmacy dashboard
-        window.location.href = '/pharmacy/dashboard';
+        console.log('✓ User is PHARMACY role');
+        console.log('Redirecting to /dashboard in 100ms...');
+        
+        // Small delay to ensure cookie is set, then redirect
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        console.log('Executing redirect now...');
+        window.location.href = '/dashboard';
         return;
       }
 
       // Handle non-200 responses
+      console.log('✗ Login failed with status:', response.status);
       try {
         const data = await response.json();
+        console.log('Error response:', data);
         setError(data.message || 'Login failed');
       } catch {
         setError('Login failed');
@@ -62,7 +71,8 @@ export default function PharmacyLoginPage() {
       setLoading(false);
       
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('=== LOGIN ERROR ===');
+      console.error('Error:', err);
       setError(`An error occurred: ${err instanceof Error ? err.message : 'Please try again.'}`);
       setLoading(false);
     }
@@ -107,6 +117,18 @@ export default function PharmacyLoginPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* DEBUG: Test button to check if JS is working */}
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('TEST: Button clicked!');
+                  alert('JavaScript is working!');
+                }}
+                className="w-full py-2 bg-green-600 text-white rounded-lg text-sm"
+              >
+                TEST: Click to verify JS works
+              </button>
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address

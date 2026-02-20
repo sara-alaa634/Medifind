@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Users, Building2, Package, FileText, Phone, AlertTriangle, TrendingUp } from 'lucide-react';
+import { fetchAdmin } from '@/lib/fetchWithAuth';
 
 interface AdminAnalytics {
   totalUsers: number;
@@ -46,13 +47,20 @@ export default function AdminAnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch('/api/analytics/admin');
+      console.log('📊 Fetching analytics from /api/analytics/admin');
+      const response = await fetchAdmin('/api/analytics/admin');
+      console.log('📡 Analytics response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch analytics');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Analytics error:', errorData);
+        throw new Error(errorData.message || 'Failed to fetch analytics');
       }
       const data = await response.json();
+      console.log('✅ Analytics data received');
       setAnalytics(data);
     } catch (err) {
+      console.error('❌ Fetch error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);

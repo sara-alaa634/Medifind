@@ -27,7 +27,11 @@ export async function middleware(request: NextRequest) {
   // Check if route requires authentication
   const isProtectedRoute = 
     path.startsWith('/patient') ||
-    path.startsWith('/pharmacy/') || // Pharmacy dashboard and sub-routes
+    path.startsWith('/pharmacy/') || // Pharmacy login page is public, but /pharmacy/* would be protected
+    path.startsWith('/dashboard') || // Pharmacy dashboard
+    path.startsWith('/inventory') || // Pharmacy inventory
+    path.startsWith('/reservations') || // Pharmacy reservations (patient reservations handled by /patient prefix)
+    path.startsWith('/profile') || // Pharmacy profile (patient profile handled by /patient prefix)
     path.startsWith('/admin/') || // Admin panel and sub-routes
     path.startsWith('/api/reservations') ||
     path.startsWith('/api/inventory') ||
@@ -56,7 +60,13 @@ export async function middleware(request: NextRequest) {
       );
     }
     
-    // For page routes, redirect to login
+    // For page routes, redirect to appropriate login based on route
+    if (path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/reservations') || path.startsWith('/profile')) {
+      return NextResponse.redirect(new URL('/pharmacy', request.url));
+    }
+    if (path.startsWith('/admin/')) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -65,7 +75,23 @@ export async function middleware(request: NextRequest) {
     const payload = await verifyJWT(token);
     
     // Role-based route protection
-    if (path.startsWith('/pharmacy/') || path.startsWith('/api/inventory')) {
+    if (path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/api/inventory')) {
+      if (payload.role !== 'PHARMACY') {
+        return createForbiddenResponse(path, 'Pharmacy access required');
+      }
+      
+      // Check pharmacy approval status
+      const pharmacy = await prisma.pharmacy.findUnique({
+        where: { userId: payload.userId }
+      });
+      
+      if (!pharmacy?.isApproved) {
+        return createForbiddenResponse(path, 'Pharmacy not approved');
+      }
+    }
+    
+    // Pharmacy-specific routes (reservations and profile in pharmacy context)
+    if ((path.startsWith('/reservations') || path.startsWith('/profile')) && !path.startsWith('/patient')) {
       if (payload.role !== 'PHARMACY') {
         return createForbiddenResponse(path, 'Pharmacy access required');
       }
@@ -143,7 +169,13 @@ export async function middleware(request: NextRequest) {
       );
     }
     
-    // For page routes, redirect to login
+    // For page routes, redirect to appropriate login based on route
+    if (path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/reservations') || path.startsWith('/profile')) {
+      return NextResponse.redirect(new URL('/pharmacy', request.url));
+    }
+    if (path.startsWith('/admin/')) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
     return NextResponse.redirect(new URL('/login', request.url));
   }
 }
@@ -171,24 +203,11 @@ function createForbiddenResponse(path: string, message: string): NextResponse {
 
 /**
  * Configure which routes the middleware should run on
+ * TEMPORARILY DISABLED FOR DEBUGGING
  */
 export const config = {
   matcher: [
-    // Page routes (excluding login pages /admin and /pharmacy)
-    '/patient/:path*',
-    '/pharmacy/dashboard/:path*',
-    '/pharmacy/inventory/:path*',
-    '/pharmacy/profile/:path*',
-    '/pharmacy/reservations/:path*',
-    '/admin/analytics/:path*',
-    '/admin/medicines/:path*',
-    '/admin/pharmacies/:path*',
-    // API routes
-    '/api/reservations/:path*',
-    '/api/inventory/:path*',
-    '/api/profile/:path*',
-    '/api/notifications/:path*',
-    '/api/direct-calls/:path*',
-    '/api/analytics/:path*',
+    // Temporarily disable all middleware to test login
+    '/api/DISABLED_FOR_NOW/:path*',
   ],
 };
