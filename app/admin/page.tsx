@@ -1,0 +1,178 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Pill, Shield } from 'lucide-react';
+
+export default function AdminLoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  console.log('AdminLoginPage rendered');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    alert('Form submitted!');
+    setError('');
+    setLoading(true);
+
+    try {
+      alert('Starting login...');
+      console.log('Attempting login with:', { email });
+      
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      alert(`Response status: ${response.status}`);
+      console.log('Response status:', response.status);
+
+      // If status is 200, login succeeded
+      if (response.status === 200) {
+        alert('Login successful! Redirecting...');
+        console.log('Login successful (status 200), redirecting...');
+        
+        // Try to parse response, but don't fail if it doesn't work
+        try {
+          const data = await response.json();
+          console.log('Response data:', data);
+          
+          // Check if user is admin
+          if (data.user && data.user.role !== 'ADMIN') {
+            alert('Not an admin account!');
+            setError('This login is for admin accounts only');
+            setLoading(false);
+            return;
+          }
+        } catch (parseError) {
+          console.log('Could not parse response, but status is 200, proceeding...');
+        }
+        
+        // Redirect to admin analytics
+        alert('About to redirect to /admin/analytics');
+        window.location.href = '/admin/analytics';
+        return;
+      }
+
+      // Handle non-200 responses
+      alert(`Login failed with status: ${response.status}`);
+      try {
+        const data = await response.json();
+        setError(data.message || 'Login failed');
+      } catch {
+        setError('Login failed');
+      }
+      setLoading(false);
+      
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Login error:', err);
+      setError(`An error occurred: ${err instanceof Error ? err.message : 'Please try again.'}`);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2 text-blue-600 font-bold text-xl">
+              <Pill size={28} />
+              <span>MediFind</span>
+            </Link>
+            <Link
+              href="/"
+              className="text-slate-600 hover:text-blue-600 transition-colors"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+                <Shield size={32} className="text-purple-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Login</h1>
+              <p className="text-gray-600">Sign in to access admin panel</p>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="admin@medifind.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-amber-800">
+                <span className="font-semibold">Default Admin:</span><br />
+                Email: admin@medifind.com<br />
+                Password: admin123456
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-slate-600 text-sm">
+          <p>&copy; 2024 MediFind. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}

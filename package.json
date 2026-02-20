@@ -2,21 +2,51 @@
   "name": "medifind",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "dev:vite": "vite",
+    "build:vite": "vite build",
+    "preview": "vite preview",
+    "test": "tsx --test",
+    "init-admin": "tsx scripts/init-admin.ts",
+    "postinstall": "prisma generate",
+    "seed": "tsx prisma/seed.ts",
+    "migrate-prototype": "tsx scripts/migrate-from-prototype.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^17.3.1",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.563.0",
+    "next": "^14.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "recharts": "^3.7.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "fast-check": "^3.22.0",
+    "ignore-loader": "^0.1.2",
+    "postcss": "^8.4.0",
+    "prisma": "^5.20.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

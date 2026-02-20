@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - represents all users (patients, pharmacies, admins)
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String         // bcrypt hashed
+  name          String
+  phone         String?
+  role          UserRole       @default(PATIENT)
+  avatar        String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  pharmacy      Pharmacy?
+  reservations  Reservation[]
+  directCalls   DirectCall[]
+  notifications Notification[]
+}
+
+enum UserRole {
+  PATIENT
+  PHARMACY
+  ADMIN
+}
+
+// Medicine model - catalog of available medicines
+model Medicine {
+  id                  String       @id @default(cuid())
+  name                String
+  activeIngredient    String
+  dosage              String
+  prescriptionRequired Boolean
+  category            String
+  priceRange          String
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  
+  // Relations
+  inventory           Inventory[]
+  reservations        Reservation[]
+  directCalls         DirectCall[]
+}
+
+// Pharmacy model - pharmacy information
+model Pharmacy {
+  id            String         @id @default(cuid())
+  userId        String         @unique
+  name          String
+  address       String
+  phone         String
+  latitude      Float
+  longitude     Float
+  rating        Float          @default(0)
+  workingHours  String
+  isApproved    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventory     Inventory[]
+  reservations  Reservation[]
+  directCalls   DirectCall[]
+}
+
+// Reservation model - patient medicine reservations
+model Reservation {
+  id              String            @id @default(cuid())
+  userId          String
+  pharmacyId      String
+  medicineId      String
+  quantity        Int
+  status          ReservationStatus @default(PENDING)
+  requestTime     DateTime          @default(now())
+  acceptedTime    DateTime?
+  rejectedTime    DateTime?
+  noResponseTime  DateTime?
+  patientPhone    String?
+  note            String?           // Pharmacy note to patient
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  // Relations
+  user            User              @relation(fields: [userId], references: [id])
+  pharmacy        Pharmacy          @relation(fields: [pharmacyId], references: [id])
+  medicine        Medicine          @relation(fields: [medicineId], references: [id])
+}
+
+enum ReservationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  NO_RESPONSE
+}
+
+// Inventory model - pharmacy stock levels
+model Inventory {
+  id            String       @id @default(cuid())
+  pharmacyId    String
+  medicineId    String
+  quantity      Int
+  status        StockStatus
+  lastUpdated   DateTime     @default(now())
+  
+  // Relations
+  pharmacy      Pharmacy     @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  medicine      Medicine     @relation(fields: [medicineId], references: [id])
+  
+  @@unique([pharmacyId, medicineId])
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+// DirectCall model - tracks when patients call pharmacies directly
+model DirectCall {
+  id            String       @id @default(cuid())
+  userId        String
+  pharmacyId    String
+  medicineId    String
+  createdAt     DateTime     @default(now())
+  
+  // Relations
+  user          User         @relation(fields: [userId], references: [id])
+  pharmacy      Pharmacy     @relation(fields: [pharmacyId], references: [id])
+  medicine      Medicine     @relation(fields: [medicineId], references: [id])
+}
+
+// Notification model - user notifications
+model Notification {
+  id            String       @id @default(cuid())
+  userId        String
+  type          String       // 'reservation_accepted', 'reservation_rejected', etc.
+  title         String
+  message       String
+  isRead        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  
+  // Relations
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
