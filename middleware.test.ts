@@ -109,9 +109,9 @@ describe('Property 17: Role-based access control', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom(
-          '/admin/analytics',
-          '/admin/medicines',
-          '/admin/pharmacies',
+          '/analytics',
+          '/medicines',
+          '/pharmacies',
           '/api/analytics/admin'
         ),
         async (adminRoute) => {
@@ -150,9 +150,9 @@ describe('Property 17: Role-based access control', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom(
-          '/admin/analytics',
-          '/admin/medicines',
-          '/admin/pharmacies',
+          '/analytics',
+          '/medicines',
+          '/pharmacies',
           '/api/analytics/admin'
         ),
         async (adminRoute) => {
@@ -191,10 +191,10 @@ describe('Property 17: Role-based access control', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom(
-          { role: 'PATIENT' as const, route: '/patient/search' },
-          { role: 'PATIENT' as const, route: '/patient/reservations' },
-          { role: 'ADMIN' as const, route: '/admin/analytics' },
-          { role: 'ADMIN' as const, route: '/admin/medicines' },
+          { role: 'PATIENT' as const, route: '/h' },
+          { role: 'PATIENT' as const, route: '/reservations' },
+          { role: 'ADMIN' as const, route: '/analytics' },
+          { role: 'ADMIN' as const, route: '/medicines' },
           { role: 'ADMIN' as const, route: '/api/analytics/admin' }
         ),
         async ({ role, route }) => {

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Pill, Users, Menu, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Pill, Users, User, Menu, X, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import NotificationBell from '@/components/NotificationBell';
 
@@ -62,6 +62,7 @@ export default function AdminLayout({
     { id: 'analytics', label: 'Analytics', icon: LayoutDashboard, href: '/analytics' },
     { id: 'pharmacies', label: 'Pharmacies', icon: Users, href: '/pharmacies' },
     { id: 'medicines', label: 'Medicines', icon: Pill, href: '/medicines' },
+    { id: 'profile', label: 'Profile', icon: User, href: '/admin-profile' },
   ];
 
   const handleLogout = async () => {

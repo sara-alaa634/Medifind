@@ -19,7 +19,7 @@ export default function PharmacyLayout({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
     { id: 'inventory', label: 'Inventory', icon: Database, href: '/inventory' },
     { id: 'reservations', label: 'Reservations', icon: ClipboardList, href: '/reservations' },
-    { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
+    { id: 'profile', label: 'Profile', icon: User, href: '/pharmacy-profile' },
   ];
 
   const handleLogout = async () => {

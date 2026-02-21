@@ -388,7 +388,7 @@ export default function Home() {
                   )}
                   
                   {user.role === 'ADMIN' && (
-                    <a href="/admin/analytics" className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <a href="/analytics" className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                       <span className="hidden sm:inline">Admin Panel</span>
                     </a>
                   )}
@@ -804,7 +804,7 @@ export default function Home() {
         {viewStep === 'reservation' && selectedMedicine && selectedPharmacy && (
           /* RESERVATION FLOW VIEW */
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-8">
-            {console.log('Rendering reservation view, status:', reservationStatus, 'pendingTimer:', pendingTimer, 'pickupTimer:', pickupTimer)}
+            {/* {console.log('Rendering reservation view, status:', reservationStatus, 'pendingTimer:', pendingTimer, 'pickupTimer:', pickupTimer)} */}
             <button 
               onClick={() => { setViewStep('home'); setReservationId(null); }} 
               className="flex items-center gap-2 text-slate-500 font-semibold hover:text-blue-600 transition-colors mb-4"

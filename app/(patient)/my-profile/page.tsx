@@ -1,5 +1,10 @@
 import ProfileForm from '@/components/ProfileForm';
 
+/**
+ * Patient Profile Page
+ * URL: /my-profile
+ * Requirements: 16.1-16.10
+ */
 export default function PatientProfilePage() {
   return (
     <div>

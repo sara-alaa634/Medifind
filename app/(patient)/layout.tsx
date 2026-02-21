@@ -18,7 +18,7 @@ export default function PatientLayout({
   const navItems = [
     { id: 'search', label: 'Search', icon: Search, href: '/' },
     { id: 'reservations', label: 'Reservations', icon: ClipboardList, href: '/my-reservations' },
-    { id: 'profile', label: 'Profile', icon: User, href: '/patient/profile' },
+    { id: 'profile', label: 'Profile', icon: User, href: '/my-profile' },
   ];
 
   const handleLogout = async () => {

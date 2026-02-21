@@ -19,9 +19,9 @@ export default function AuthRedirect() {
 
           // Redirect based on role
           if (role === 'ADMIN') {
-            router.push('/admin/analytics');
+            router.push('/analytics');
           } else if (role === 'PHARMACY') {
-            router.push('/pharmacy/dashboard');
+            router.push('/dashboard');
           } else if (role === 'PATIENT') {
             router.push('/');
           }

@@ -57,9 +57,9 @@ checkPage('/pharmacy/profile', 'app/(pharmacy)/profile/page.tsx', 'PHARMACY', 'P
 
 console.log('\nAdmin Pages:');
 console.log('-'.repeat(80));
-checkPage('/admin/analytics', 'app/(admin)/analytics/page.tsx', 'ADMIN', 'System analytics');
-checkPage('/admin/medicines', 'app/(admin)/medicines/page.tsx', 'ADMIN', 'Medicine management');
-checkPage('/admin/pharmacies', 'app/(admin)/pharmacies/page.tsx', 'ADMIN', 'Pharmacy approvals');
+checkPage('/analytics', 'app/(admin)/analytics/page.tsx', 'ADMIN', 'System analytics');
+checkPage('/medicines', 'app/(admin)/medicines/page.tsx', 'ADMIN', 'Medicine management');
+checkPage('/pharmacies', 'app/(admin)/pharmacies/page.tsx', 'ADMIN', 'Pharmacy approvals');
 
 console.log('\nLayouts:');
 console.log('-'.repeat(80));

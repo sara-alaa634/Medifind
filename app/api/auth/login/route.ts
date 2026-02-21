@@ -43,6 +43,33 @@ export async function POST(request: NextRequest) {
       return handleAuthenticationError('Invalid email or password');
     }
     
+    // Check if pharmacy user is approved (Requirement: 6.4)
+    if (user.role === 'PHARMACY') {
+      if (!user.pharmacy) {
+        // Pharmacy was rejected/deleted by admin
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'ACCOUNT_REJECTED',
+            message: 'Your pharmacy account has been rejected by the administrator. Please contact support for more information.',
+          },
+          { status: 403 }
+        );
+      }
+      
+      if (!user.pharmacy.isApproved) {
+        // Pharmacy is pending approval
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'ACCOUNT_PENDING',
+            message: 'Your pharmacy account is pending approval. You will be notified once an administrator reviews your application.',
+          },
+          { status: 403 }
+        );
+      }
+    }
+    
     // Generate JWT token
     const token = generateJWT(user.id, user.role);
     

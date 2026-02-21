@@ -1,5 +1,10 @@
 import ProfileForm from '@/components/ProfileForm';
 
+/**
+ * Pharmacy Profile Page
+ * URL: /pharmacy-profile
+ * Requirements: 16.1-16.10
+ */
 export default function PharmacyProfilePage() {
   return (
     <div>
