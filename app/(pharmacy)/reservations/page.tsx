@@ -298,17 +298,45 @@ export default function PharmacyReservationsPage() {
                 </h4>
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-900">{reservation.user.name}</p>
-                  {reservation.user.phone && (
+                  
+                  {/* Show phone for normal reservations */}
+                  {reservation.status !== 'NO_RESPONSE' && reservation.user.phone && (
                     <p className="text-sm text-gray-600 flex items-center gap-2">
                       <Phone className="w-4 h-4" />
                       {reservation.user.phone}
                     </p>
                   )}
-                  {reservation.patientPhone && reservation.status === 'NO_RESPONSE' && (
-                    <p className="text-sm text-blue-600 flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      Contact: {reservation.patientPhone}
-                    </p>
+                  
+                  {/* Special handling for NO_RESPONSE reservations */}
+                  {reservation.status === 'NO_RESPONSE' && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      {reservation.patientPhone || reservation.user.phone ? (
+                        <div>
+                          <p className="text-xs font-semibold text-blue-900 mb-2 flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            Contact Patient:
+                          </p>
+                          <a 
+                            href={`tel:${reservation.patientPhone || reservation.user.phone}`}
+                            className="text-lg font-bold text-blue-600 hover:text-blue-700 underline"
+                          >
+                            {reservation.patientPhone || reservation.user.phone}
+                          </a>
+                          <p className="text-xs text-blue-700 mt-2">
+                            Call the patient to confirm availability, then accept the reservation below.
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs font-semibold text-blue-900 mb-1">
+                            Waiting for patient contact info
+                          </p>
+                          <p className="text-xs text-blue-700">
+                            The patient will be notified to provide their phone number. You'll receive a notification when they do.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -375,11 +403,26 @@ export default function PharmacyReservationsPage() {
 
               {/* NO_RESPONSE Warning */}
               {reservation.status === 'NO_RESPONSE' && (
-                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-sm text-orange-800">
-                    <span className="font-semibold">Attention:</span> This reservation timed out after 5 minutes. 
-                    Please respond promptly to improve your service rating.
-                  </p>
+                <div className="mt-4 p-4 bg-orange-50 border-l-4 border-orange-400 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-orange-900 mb-1">
+                        Reservation Timed Out
+                      </p>
+                      <p className="text-sm text-orange-800">
+                        This reservation exceeded the 5-minute response window. 
+                        {reservation.patientPhone || reservation.user.phone ? (
+                          <span className="font-medium"> Contact the patient using the phone number above, then accept the reservation if the medicine is available.</span>
+                        ) : (
+                          <span> Waiting for patient to provide contact information.</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-orange-700 mt-2">
+                        💡 Tip: Respond within 5 minutes to improve your service rating.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

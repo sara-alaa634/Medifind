@@ -44,6 +44,10 @@ export default function PatientReservationsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [submittingPhone, setSubmittingPhone] = useState(false);
 
   useEffect(() => {
     loadReservations();
@@ -131,6 +135,43 @@ export default function PatientReservationsPage() {
 
   const canCancelReservation = (status: string) => {
     return status === 'PENDING' || status === 'ACCEPTED';
+  };
+
+  const openPhoneModal = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setPhoneNumber('');
+    setShowPhoneModal(true);
+  };
+
+  const handleProvidePhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedReservation || !phoneNumber.trim()) return;
+
+    setSubmittingPhone(true);
+    try {
+      const response = await fetch(`/api/reservations/${selectedReservation.id}/provide-phone`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phone: phoneNumber.trim() }),
+      });
+
+      if (response.ok) {
+        setShowPhoneModal(false);
+        setSelectedReservation(null);
+        setPhoneNumber('');
+        await loadReservations();
+        alert('✓ Phone number provided! The pharmacy will contact you soon.');
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Failed to provide phone number');
+      }
+    } catch (error) {
+      console.error('Error providing phone:', error);
+      alert('An error occurred');
+    } finally {
+      setSubmittingPhone(false);
+    }
   };
 
   return (
@@ -296,16 +337,152 @@ export default function PatientReservationsPage() {
                 </div>
               )}
 
+              {/* ACCEPTED - Pickup Instructions with Timer */}
+              {reservation.status === 'ACCEPTED' && (
+                <div className="mt-4 p-6 bg-green-50 border-l-4 border-green-500 rounded-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-lg font-bold text-green-900 mb-2">
+                        ✓ Reservation Confirmed!
+                      </h4>
+                      <p className="text-sm text-green-800 mb-3">
+                        Your medicine is ready for pickup. Please collect it within <span className="font-bold">30 minutes</span> to keep your reservation.
+                      </p>
+                      <div className="bg-white rounded-lg p-4 mb-3">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">PICKUP LOCATION:</p>
+                        <p className="text-sm font-bold text-gray-900 mb-1">{reservation.pharmacy.name}</p>
+                        <p className="text-sm text-gray-700 flex items-center gap-2 mb-2">
+                          <MapPin className="w-4 h-4" />
+                          {reservation.pharmacy.address}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-gray-700 flex items-center gap-2">
+                            <Phone className="w-4 h-4" />
+                            {reservation.pharmacy.phone}
+                          </p>
+                          <p className="text-xs text-gray-600 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {reservation.pharmacy.workingHours}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(reservation.pharmacy.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-center text-sm font-medium"
+                        >
+                          Get Directions
+                        </a>
+                        <a
+                          href={`tel:${reservation.pharmacy.phone}`}
+                          className="flex-1 px-4 py-2 border-2 border-green-600 text-green-700 rounded-lg hover:bg-green-50 transition-colors text-center text-sm font-medium"
+                        >
+                          Call Pharmacy
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* NO_RESPONSE Message */}
-              {reservation.status === 'NO_RESPONSE' && !reservation.patientPhone && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    The pharmacy hasn't responded yet. Please provide your phone number so they can contact you directly.
-                  </p>
+              {reservation.status === 'NO_RESPONSE' && (
+                <div className="mt-4">
+                  {!reservation.patientPhone ? (
+                    <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Pharmacy Hasn't Responded Yet
+                          </p>
+                          <p className="text-sm text-yellow-800 mb-3">
+                            The pharmacy didn't respond within 5 minutes. Provide your phone number so they can contact you directly to complete this reservation.
+                          </p>
+                          <button
+                            onClick={() => openPhoneModal(reservation)}
+                            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+                          >
+                            Provide Phone Number
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <Phone className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-blue-900 mb-1">
+                            Phone Number Provided
+                          </p>
+                          <p className="text-sm text-blue-800">
+                            The pharmacy has your contact number ({reservation.patientPhone}). They will call you soon to complete this reservation.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Provide Phone Modal */}
+      {showPhoneModal && selectedReservation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Provide Phone Number</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              The pharmacy will call you to confirm availability for <span className="font-semibold">{selectedReservation.medicine.name}</span>.
+            </p>
+            <form onSubmit={handleProvidePhone}>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+1 555 1111"
+                  required
+                  pattern="[\+]?[0-9\s\-\(\)]+"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Include country code if outside your region
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPhoneModal(false);
+                    setSelectedReservation(null);
+                    setPhoneNumber('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingPhone || !phoneNumber.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                >
+                  {submittingPhone ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

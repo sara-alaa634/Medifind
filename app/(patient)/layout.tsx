@@ -16,8 +16,8 @@ export default function PatientLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { id: 'search', label: 'Search', icon: Search, href: '/patient/search' },
-    { id: 'reservations', label: 'Reservations', icon: ClipboardList, href: '/patient/reservations' },
+    { id: 'search', label: 'Search', icon: Search, href: '/' },
+    { id: 'reservations', label: 'Reservations', icon: ClipboardList, href: '/my-reservations' },
     { id: 'profile', label: 'Profile', icon: User, href: '/patient/profile' },
   ];
 

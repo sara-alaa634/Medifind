@@ -52,6 +52,9 @@ export default function Home() {
   const [callingPharmacy, setCallingPharmacy] = useState<PharmacyAvailability | null>(null);
   const [selectedPharmacy, setSelectedPharmacy] = useState<PharmacyAvailability | null>(null);
   const [reservationId, setReservationId] = useState<string | null>(null);
+  const [reservationStatus, setReservationStatus] = useState<string>('PENDING');
+  const [pickupTimer, setPickupTimer] = useState(1800); // 30 minutes in seconds
+  const [pendingTimer, setPendingTimer] = useState(300); // 5 minutes in seconds
 
   useEffect(() => {
     // Check if user is logged in
@@ -83,6 +86,46 @@ export default function Home() {
     // Load initial medicines
     loadMedicines();
   }, []);
+  
+  // Countdown timer for accepted reservations
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (reservationStatus === 'ACCEPTED' && pickupTimer > 0) {
+      interval = setInterval(() => {
+        setPickupTimer(t => {
+          if (t <= 1) return 0;
+          return t - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [reservationStatus]); // Only depend on status, not timer value
+  
+  // Countdown timer for pending reservations
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (reservationStatus === 'PENDING' && pendingTimer > 0) {
+      console.log('Starting pending timer countdown, current:', pendingTimer);
+      interval = setInterval(() => {
+        setPendingTimer(t => {
+          if (t <= 1) {
+            console.log('Pending timer reached 0');
+            return 0;
+          }
+          console.log('Pending timer tick:', t - 1);
+          return t - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) {
+        console.log('Clearing pending timer interval');
+        clearInterval(interval);
+      }
+    };
+  }, [reservationStatus]); // Only depend on status, not timer value
 
   const loadMedicines = async (search?: string, category?: string) => {
     try {
@@ -156,6 +199,7 @@ export default function Home() {
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           pharmacyId: pharmacy.pharmacyId,
           medicineId: selectedMedicine.id,
@@ -165,13 +209,51 @@ export default function Home() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Reservation created:', data.reservation);
         setReservationId(data.reservation.id);
         setSelectedPharmacy(pharmacy);
+        setReservationStatus('PENDING');
+        setPendingTimer(300); // Reset to 5 minutes
         setViewStep('reservation');
+        console.log('View changed to reservation, status:', 'PENDING', 'timer:', 300);
+        
+        // Poll for status updates
+        pollReservationStatus(data.reservation.id);
+      } else {
+        const errorData = await response.json();
+        console.error('Reservation failed:', errorData);
+        alert(`✗ Reservation failed: ${errorData.message || 'Please try again'}`);
       }
     } catch (error) {
       console.error('Error creating reservation:', error);
+      alert('✗ An error occurred while creating the reservation. Please try again.');
     }
+  };
+  
+  const pollReservationStatus = (resId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/reservations/${resId}`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setReservationStatus(data.reservation.status);
+          
+          if (data.reservation.status === 'ACCEPTED') {
+            setPickupTimer(1800); // Reset to 30 minutes
+            clearInterval(interval);
+          } else if (data.reservation.status === 'REJECTED' || data.reservation.status === 'NO_RESPONSE') {
+            clearInterval(interval);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling reservation:', error);
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    // Stop polling after 5 minutes
+    setTimeout(() => clearInterval(interval), 300000);
   };
 
   const getSortedPharmacies = () => {
@@ -184,6 +266,12 @@ export default function Home() {
       if (sortBy === 'rating') return b.rating - a.rating;
       return 0;
     });
+  };
+  
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   const getStockStatusBadge = (status: string) => {
@@ -242,7 +330,7 @@ export default function Home() {
               {!loading && user && (
                 <>
                   {user.role === 'PATIENT' && (
-                    <a href="/patient/reservations" className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <a href="/my-reservations" className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                       <span className="hidden sm:inline">My Reservations</span>
                     </a>
                   )}
@@ -550,6 +638,125 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {viewStep === 'reservation' && selectedMedicine && selectedPharmacy && (
+          /* RESERVATION FLOW VIEW */
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-8">
+            {console.log('Rendering reservation view, status:', reservationStatus, 'pendingTimer:', pendingTimer, 'pickupTimer:', pickupTimer)}
+            <button 
+              onClick={() => { setViewStep('home'); setReservationId(null); }} 
+              className="flex items-center gap-2 text-slate-500 font-semibold hover:text-blue-600 transition-colors mb-4"
+            >
+              <ChevronLeft size={20} />
+              Back to Search
+            </button>
+
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+              {/* Status Header */}
+              <div className={`p-8 text-center transition-colors duration-500 ${
+                reservationStatus === 'PENDING' ? 'bg-blue-600 text-white' :
+                reservationStatus === 'ACCEPTED' ? 'bg-emerald-600 text-white' :
+                reservationStatus === 'REJECTED' ? 'bg-rose-600 text-white' :
+                'bg-slate-600 text-white'
+              }`}>
+                {reservationStatus === 'PENDING' && (
+                  <div className="space-y-4">
+                    <Loader2 size={48} className="animate-spin mx-auto" />
+                    <h2 className="text-2xl font-bold">Request Processing</h2>
+                    <p className="opacity-90">Pharmacy is checking stock levels...</p>
+                    <div className="inline-flex items-center gap-2 bg-white/20 px-6 py-3 rounded-full font-mono text-xl font-bold">
+                      <Clock size={20} />
+                      {formatTime(pendingTimer)}
+                    </div>
+                  </div>
+                )}
+
+                {reservationStatus === 'ACCEPTED' && (
+                  <div className="space-y-4">
+                    <CheckCircle2 size={48} className="mx-auto animate-bounce" />
+                    <h2 className="text-2xl font-bold">Confirmed for Pickup!</h2>
+                    <p className="opacity-90">Please pick up your order within:</p>
+                    <div className="inline-flex items-center gap-2 bg-white/20 px-6 py-3 rounded-full font-mono text-2xl font-bold">
+                      <Clock size={24} />
+                      {formatTime(pickupTimer)}
+                    </div>
+                  </div>
+                )}
+
+                {reservationStatus === 'REJECTED' && (
+                  <div className="space-y-4">
+                    <XCircle size={48} className="mx-auto" />
+                    <h2 className="text-2xl font-bold">Unable to Fulfill</h2>
+                    <p className="opacity-90">Stock was recently depleted at this location.</p>
+                  </div>
+                )}
+
+                {reservationStatus === 'NO_RESPONSE' && (
+                  <div className="space-y-4">
+                    <AlertCircle size={48} className="mx-auto" />
+                    <h2 className="text-2xl font-bold">No Response</h2>
+                    <p className="opacity-90">Pharmacy did not respond in time.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="p-8 space-y-6">
+                <div className="flex items-start justify-between border-b border-slate-100 pb-6">
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Item</div>
+                    <div className="text-xl font-bold text-slate-900">{selectedMedicine.name}</div>
+                    <div className="text-slate-500">{selectedMedicine.dosage} • 1 Unit</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Store</div>
+                    <div className="text-lg font-bold text-slate-900">{selectedPharmacy.pharmacyName}</div>
+                    <div className="text-slate-500 text-sm">{selectedPharmacy.phone}</div>
+                  </div>
+                </div>
+
+                {reservationStatus === 'ACCEPTED' && (
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-2xl flex gap-4">
+                      <MapPin className="text-blue-600 flex-shrink-0" />
+                      <div>
+                        <div className="font-bold text-slate-900">Pharmacy Location</div>
+                        <div className="text-sm text-slate-600">{selectedPharmacy.address}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-4">
+                      <button 
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPharmacy.address)}`, '_blank')}
+                        className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg"
+                      >
+                        Directions
+                      </button>
+                      <a 
+                        href={`tel:${selectedPharmacy.phone}`}
+                        className="flex-1 py-4 border-2 border-slate-200 text-center text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                      >
+                        Call Store
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {(reservationStatus === 'REJECTED' || reservationStatus === 'NO_RESPONSE') && (
+                  <div className="space-y-4">
+                    <p className="text-slate-600 text-center">Try searching for other nearby pharmacies.</p>
+                    <button 
+                      onClick={() => { setViewStep('home'); setReservationId(null); }}
+                      className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-100"
+                    >
+                      Try New Search
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
