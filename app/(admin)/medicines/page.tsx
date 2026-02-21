@@ -41,6 +41,12 @@ export default function AdminMedicinesPage() {
     priceRange: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  
+  // Delete confirmation modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [medicineToDelete, setMedicineToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     loadMedicines();
@@ -76,6 +82,7 @@ export default function AdminMedicinesPage() {
   const handleAddMedicine = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError('');
 
     try {
       const response = await fetch('/api/medicines', {
@@ -91,11 +98,11 @@ export default function AdminMedicinesPage() {
         await loadMedicines();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to add medicine');
+        setError(data.message || 'Failed to add medicine');
       }
     } catch (error) {
       console.error('Error adding medicine:', error);
-      alert('An error occurred');
+      setError('An error occurred');
     } finally {
       setSubmitting(false);
     }
@@ -106,6 +113,7 @@ export default function AdminMedicinesPage() {
     if (!selectedMedicine) return;
 
     setSubmitting(true);
+    setError('');
     try {
       const response = await fetch(`/api/medicines/${selectedMedicine.id}`, {
         credentials: 'include',
@@ -121,36 +129,45 @@ export default function AdminMedicinesPage() {
         await loadMedicines();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to update medicine');
+        setError(data.message || 'Failed to update medicine');
       }
     } catch (error) {
       console.error('Error updating medicine:', error);
-      alert('An error occurred');
+      setError('An error occurred');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteMedicine = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
+    setMedicineToDelete({ id, name });
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!medicineToDelete) return;
+
+    setDeleting(true);
+    setError('');
     try {
-      const response = await fetch(`/api/medicines/${id}`, {
+      const response = await fetch(`/api/medicines/${medicineToDelete.id}`, {
         credentials: 'include',
         method: 'DELETE',
       });
 
       if (response.ok) {
+        setShowDeleteConfirm(false);
+        setMedicineToDelete(null);
         await loadMedicines();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to delete medicine');
+        setError(data.message || 'Failed to delete medicine');
       }
     } catch (error) {
       console.error('Error deleting medicine:', error);
-      alert('An error occurred');
+      setError('An error occurred');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -164,6 +181,7 @@ export default function AdminMedicinesPage() {
       category: medicine.category,
       priceRange: medicine.priceRange,
     });
+    setError('');
     setShowEditModal(true);
   };
 
@@ -176,6 +194,7 @@ export default function AdminMedicinesPage() {
       category: '',
       priceRange: '',
     });
+    setError('');
   };
 
   return (
@@ -324,6 +343,13 @@ export default function AdminMedicinesPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Medicine</h2>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
             <form onSubmit={handleAddMedicine}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -427,6 +453,13 @@ export default function AdminMedicinesPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit Medicine</h2>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
             <form onSubmit={handleUpdateMedicine}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -521,6 +554,60 @@ export default function AdminMedicinesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && medicineToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
+              Delete Medicine?
+            </h2>
+            
+            <p className="text-gray-600 text-center mb-2">
+              You are about to permanently delete
+            </p>
+            <p className="text-gray-900 font-semibold text-center mb-6">
+              {medicineToDelete.name}
+            </p>
+            <p className="text-red-600 text-center mb-8 font-medium">
+              This action cannot be undone. The medicine will be removed from the catalog.
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <button 
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setMedicineToDelete(null);
+                  setError('');
+                }}
+                disabled={deleting}
+                className="p-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="p-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

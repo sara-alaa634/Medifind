@@ -44,6 +44,8 @@ export default function PatientReservationsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [reservationToCancel, setReservationToCancel] = useState<string | null>(null);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -76,29 +78,33 @@ export default function PatientReservationsPage() {
   };
 
   const handleCancelReservation = async (reservationId: string) => {
-    if (!confirm('Are you sure you want to cancel this reservation?')) {
-      return;
-    }
+    setReservationToCancel(reservationId);
+    setShowCancelConfirm(true);
+  };
 
-    setCancellingId(reservationId);
+  const confirmCancelReservation = async () => {
+    if (!reservationToCancel) return;
+
+    setCancellingId(reservationToCancel);
+    setShowCancelConfirm(false);
+    
     try {
-      const response = await fetch(`/api/reservations/${reservationId}/cancel`, {
+      const response = await fetch(`/api/reservations/${reservationToCancel}/cancel`, {
         credentials: 'include',
         method: 'PUT',
       });
 
       if (response.ok) {
-        // Reload reservations
         await loadReservations();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to cancel reservation');
+        console.error('Cancel failed:', data.message);
       }
     } catch (error) {
       console.error('Error cancelling reservation:', error);
-      alert('An error occurred while cancelling the reservation');
     } finally {
       setCancellingId(null);
+      setReservationToCancel(null);
     }
   };
 
@@ -482,6 +488,42 @@ export default function PatientReservationsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                <AlertCircle size={36} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Cancel Reservation?</h2>
+                <p className="text-gray-600 mt-2">
+                  Are you sure you want to cancel this reservation? The pharmacy will be notified.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 w-full pt-4">
+                <button 
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    setReservationToCancel(null);
+                  }}
+                  className="p-4 border-2 border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Keep Reservation
+                </button>
+                <button 
+                  onClick={confirmCancelReservation}
+                  className="p-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+                >
+                  Yes, Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

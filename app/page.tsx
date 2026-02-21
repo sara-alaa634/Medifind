@@ -36,7 +36,7 @@ const CATEGORIES = [
   { name: 'Allergy', icon: '🤧' }
 ];
 
-type ViewStep = 'home' | 'results' | 'reservation';
+type ViewStep = 'home' | 'results' | 'confirm' | 'reservation';
 
 export default function Home() {
   const router = useRouter();
@@ -55,6 +55,8 @@ export default function Home() {
   const [reservationStatus, setReservationStatus] = useState<string>('PENDING');
   const [pickupTimer, setPickupTimer] = useState(1800); // 30 minutes in seconds
   const [pendingTimer, setPendingTimer] = useState(300); // 5 minutes in seconds
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -195,13 +197,21 @@ export default function Home() {
       return;
     }
 
+    // Show confirmation page instead of creating reservation immediately
+    setSelectedPharmacy(pharmacy);
+    setViewStep('confirm');
+  };
+  
+  const handleConfirmReservation = async () => {
+    if (!selectedMedicine || !selectedPharmacy || !user) return;
+
     try {
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          pharmacyId: pharmacy.pharmacyId,
+          pharmacyId: selectedPharmacy.pharmacyId,
           medicineId: selectedMedicine.id,
           quantity: 1,
         }),
@@ -211,7 +221,6 @@ export default function Home() {
         const data = await response.json();
         console.log('Reservation created:', data.reservation);
         setReservationId(data.reservation.id);
-        setSelectedPharmacy(pharmacy);
         setReservationStatus('PENDING');
         setPendingTimer(300); // Reset to 5 minutes
         setViewStep('reservation');
@@ -227,6 +236,40 @@ export default function Home() {
     } catch (error) {
       console.error('Error creating reservation:', error);
       alert('✗ An error occurred while creating the reservation. Please try again.');
+    }
+  };
+
+  const handleCancelReservation = async () => {
+    if (!reservationId || cancelling) return;
+    
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancelReservation = async () => {
+    if (!reservationId) return;
+
+    setCancelling(true);
+    setShowCancelConfirm(false);
+    
+    try {
+      const response = await fetch(`/api/reservations/${reservationId}/cancel`, {
+        method: 'PUT',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setViewStep('home');
+        setReservationId(null);
+        setSelectedMedicine(null);
+        setSelectedPharmacy(null);
+      } else {
+        const errorData = await response.json();
+        console.error('Cancel failed:', errorData);
+      }
+    } catch (error) {
+      console.error('Error cancelling reservation:', error);
+    } finally {
+      setCancelling(false);
     }
   };
   
@@ -246,6 +289,9 @@ export default function Home() {
           } else if (data.reservation.status === 'REJECTED' || data.reservation.status === 'NO_RESPONSE') {
             clearInterval(interval);
           }
+        } else if (response.status === 404) {
+          console.error('Reservation not found, stopping polling');
+          clearInterval(interval);
         }
       } catch (error) {
         console.error('Error polling reservation:', error);
@@ -642,6 +688,119 @@ export default function Home() {
           </div>
         )}
 
+        {viewStep === 'confirm' && selectedMedicine && selectedPharmacy && (
+          /* CONFIRMATION VIEW */
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-8">
+            <button 
+              onClick={() => setViewStep('results')} 
+              className="flex items-center gap-2 text-slate-500 font-semibold hover:text-blue-600 transition-colors mb-4"
+            >
+              <ChevronLeft size={20} />
+              Back to Results
+            </button>
+
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+              {/* Header */}
+              <div className="bg-blue-600 text-white p-6 text-center">
+                <h2 className="text-2xl font-bold">Confirm Reservation</h2>
+                <p className="text-sm opacity-90 mt-1">Review details before confirming</p>
+              </div>
+
+              {/* Content */}
+              <div className="p-8 space-y-6">
+                {/* Medicine Details */}
+                <div className="border-b border-slate-100 pb-6">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Medicine</div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{selectedMedicine.name}</h3>
+                  <p className="text-slate-600">{selectedMedicine.activeIngredient} • {selectedMedicine.dosage}</p>
+                  <div className="flex items-center gap-4 mt-3">
+                    <span className="text-sm text-slate-600">Quantity: <span className="font-bold">1 unit</span></span>
+                    <span className="text-sm text-slate-600">Price: <span className="font-bold">{selectedMedicine.priceRange}</span></span>
+                    <span className="text-sm text-slate-600">Category: <span className="font-bold">{selectedMedicine.category}</span></span>
+                  </div>
+                  {selectedMedicine.prescriptionRequired && (
+                    <div className="mt-3 inline-flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200">
+                      <AlertCircle size={14} />
+                      Prescription Required
+                    </div>
+                  )}
+                </div>
+
+                {/* Pharmacy Details */}
+                <div className="border-b border-slate-100 pb-6">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Pharmacy</div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{selectedPharmacy.pharmacyName}</h3>
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-700 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-slate-400" />
+                      {selectedPharmacy.address}
+                    </p>
+                    <p className="text-sm text-slate-700 flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-slate-400" />
+                      {selectedPharmacy.phone}
+                    </p>
+                    <p className="text-sm text-slate-700 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      {selectedPharmacy.workingHours}
+                    </p>
+                    <p className="text-sm text-slate-700 flex items-center gap-2">
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      {selectedPharmacy.rating.toFixed(1)} rating
+                    </p>
+                  </div>
+                  <div className="mt-3">
+                    {getStockStatusBadge(selectedPharmacy.stockStatus)}
+                  </div>
+                </div>
+
+                {/* Important Info */}
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900 mb-1">What happens next?</p>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• Pharmacy has <span className="font-bold">5 minutes</span> to respond</li>
+                        <li>• You'll receive a notification when they accept</li>
+                        <li>• Pick up within <span className="font-bold">30 minutes</span> after acceptance</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3 pt-4">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPharmacy.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-lg"
+                  >
+                    <MapPin size={20} />
+                    Get Directions
+                  </a>
+                  <div className="flex gap-3">
+                    <a
+                      href={`tel:${selectedPharmacy.phone}`}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 border-2 border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-colors"
+                    >
+                      <Phone size={20} />
+                      Call Pharmacy
+                    </a>
+                    <button
+                      onClick={handleConfirmReservation}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                    >
+                      <CalendarCheck size={20} />
+                      Confirm Reservation
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {viewStep === 'reservation' && selectedMedicine && selectedPharmacy && (
           /* RESERVATION FLOW VIEW */
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-8">
@@ -756,6 +915,19 @@ export default function Home() {
                     </button>
                   </div>
                 )}
+
+                {/* Cancel Button - Show for PENDING and ACCEPTED */}
+                {(reservationStatus === 'PENDING' || reservationStatus === 'ACCEPTED') && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <button
+                      onClick={handleCancelReservation}
+                      disabled={cancelling}
+                      className="w-full py-3 text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {cancelling ? 'Cancelling...' : 'Cancel Reservation'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -790,6 +962,39 @@ export default function Home() {
                 >
                   Dial Now
                 </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                <AlertCircle size={36} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Cancel Reservation?</h2>
+                <p className="text-slate-600 mt-2">
+                  Are you sure you want to cancel this reservation? The pharmacy will be notified.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 w-full pt-4">
+                <button 
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="p-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Keep Reservation
+                </button>
+                <button 
+                  onClick={confirmCancelReservation}
+                  className="p-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+                >
+                  Yes, Cancel
+                </button>
               </div>
             </div>
           </div>

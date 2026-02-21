@@ -39,6 +39,12 @@ export default function AdminPharmaciesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [approvalFilter, setApprovalFilter] = useState<string>('');
   const [actioningId, setActioningId] = useState<string | null>(null);
+  
+  // Confirmation modal state
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [selectedPharmacy, setSelectedPharmacy] = useState<{ id: string; name: string } | null>(null);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     loadPharmacies();
@@ -66,52 +72,64 @@ export default function AdminPharmaciesPage() {
   };
 
   const handleApprovePharmacy = async (id: string, name: string) => {
-    if (!confirm(`Approve "${name}"? They will be able to access the pharmacy portal.`)) {
-      return;
-    }
+    setSelectedPharmacy({ id, name });
+    setShowApproveConfirm(true);
+  };
 
-    setActioningId(id);
+  const confirmApprove = async () => {
+    if (!selectedPharmacy) return;
+
+    setActioningId(selectedPharmacy.id);
+    setError('');
     try {
-      const response = await fetch(`/api/pharmacies/${id}/approve`, {
+      const response = await fetch(`/api/pharmacies/${selectedPharmacy.id}/approve`, {
         credentials: 'include',
         method: 'POST',
       });
 
       if (response.ok) {
+        setShowApproveConfirm(false);
+        setSelectedPharmacy(null);
         await loadPharmacies();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to approve pharmacy');
+        setError(data.message || 'Failed to approve pharmacy');
       }
     } catch (error) {
       console.error('Error approving pharmacy:', error);
-      alert('An error occurred');
+      setError('An error occurred');
     } finally {
       setActioningId(null);
     }
   };
 
   const handleRejectPharmacy = async (id: string, name: string) => {
-    if (!confirm(`Reject and delete "${name}"? This will permanently remove the pharmacy and associated user account. This action cannot be undone.`)) {
-      return;
-    }
+    setSelectedPharmacy({ id, name });
+    setShowRejectConfirm(true);
+  };
 
-    setActioningId(id);
+  const confirmReject = async () => {
+    if (!selectedPharmacy) return;
+
+    setActioningId(selectedPharmacy.id);
+    setError('');
     try {
-      const response = await fetch(`/api/pharmacies/${id}`, {
+      const response = await fetch(`/api/pharmacies/${selectedPharmacy.id}`, {
         credentials: 'include',
         method: 'DELETE',
       });
 
       if (response.ok) {
+        setShowRejectConfirm(false);
+        setSelectedPharmacy(null);
         await loadPharmacies();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to reject pharmacy');
+        setError(data.message || 'Failed to reject pharmacy');
       }
     } catch (error) {
       console.error('Error rejecting pharmacy:', error);
-      alert('An error occurred');
+      setError('An error occurred');
     } finally {
       setActioningId(null);
     }
@@ -336,6 +354,114 @@ export default function AdminPharmaciesPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Approve Confirmation Modal */}
+      {showApproveConfirm && selectedPharmacy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <Check className="w-8 h-8 text-green-600" />
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
+              Approve Pharmacy?
+            </h2>
+            
+            <p className="text-gray-600 text-center mb-2">
+              You are about to approve
+            </p>
+            <p className="text-gray-900 font-semibold text-center mb-6">
+              {selectedPharmacy.name}
+            </p>
+            <p className="text-gray-600 text-center mb-8">
+              They will be able to access the pharmacy portal and manage their inventory and reservations.
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <button 
+                onClick={() => {
+                  setShowApproveConfirm(false);
+                  setSelectedPharmacy(null);
+                  setError('');
+                }}
+                disabled={actioningId === selectedPharmacy.id}
+                className="p-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmApprove}
+                disabled={actioningId === selectedPharmacy.id}
+                className="p-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {actioningId === selectedPharmacy.id ? 'Approving...' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Confirmation Modal */}
+      {showRejectConfirm && selectedPharmacy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <X className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
+              Reject & Delete Pharmacy?
+            </h2>
+            
+            <p className="text-gray-600 text-center mb-2">
+              You are about to permanently delete
+            </p>
+            <p className="text-gray-900 font-semibold text-center mb-6">
+              {selectedPharmacy.name}
+            </p>
+            <p className="text-red-600 text-center mb-8 font-medium">
+              This will permanently remove the pharmacy and associated user account. This action cannot be undone.
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <button 
+                onClick={() => {
+                  setShowRejectConfirm(false);
+                  setSelectedPharmacy(null);
+                  setError('');
+                }}
+                disabled={actioningId === selectedPharmacy.id}
+                className="p-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmReject}
+                disabled={actioningId === selectedPharmacy.id}
+                className="p-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {actioningId === selectedPharmacy.id ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

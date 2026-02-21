@@ -53,6 +53,11 @@ export default function PharmacyInventoryPage() {
   const [searchingMedicines, setSearchingMedicines] = useState(false);
   const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
+  
+  // Delete confirmation modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadInventory();
@@ -205,25 +210,34 @@ export default function PharmacyInventoryPage() {
     }
   };
 
-  const handleDeleteInventory = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this item from inventory?')) {
-      return;
-    }
+  const handleDeleteInventory = async (id: string, name: string) => {
+    setItemToDelete({ id, name });
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    setDeleting(true);
     try {
-      const response = await fetch(`/api/inventory/${id}`, {
+      const response = await fetch(`/api/inventory/${itemToDelete.id}`, {
         credentials: 'include',
         method: 'DELETE',
       });
 
       if (response.ok) {
+        setShowDeleteConfirm(false);
+        setItemToDelete(null);
         await loadInventory();
       } else {
         const data = await response.json();
-        console.error('Failed to delete:', data.message || 'Failed to delete inventory item');
+        setError(data.message || 'Failed to delete inventory item');
       }
     } catch (error) {
       console.error('Error deleting inventory:', error);
+      setError('An error occurred while deleting the item');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -378,7 +392,7 @@ export default function PharmacyInventoryPage() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteInventory(item.id)}
+                          onClick={() => handleDeleteInventory(item.id, item.medicine.name)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Remove from inventory"
                         >
@@ -504,6 +518,60 @@ export default function PharmacyInventoryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && itemToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
+              Remove from Inventory?
+            </h2>
+            
+            <p className="text-gray-600 text-center mb-2">
+              Are you sure you want to remove
+            </p>
+            <p className="text-gray-900 font-semibold text-center mb-6">
+              {itemToDelete.name}
+            </p>
+            <p className="text-gray-600 text-center mb-8">
+              This will remove the medicine from your inventory. You can add it back later if needed.
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <button 
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setItemToDelete(null);
+                  setError('');
+                }}
+                disabled={deleting}
+                className="p-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Keep Item
+              </button>
+              <button 
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="p-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Removing...' : 'Remove'}
+              </button>
+            </div>
           </div>
         </div>
       )}
